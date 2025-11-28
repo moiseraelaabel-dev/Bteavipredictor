@@ -1,2 +1,0 @@
-# Bteavipredictor
-A prediction application 
