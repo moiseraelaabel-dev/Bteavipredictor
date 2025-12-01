@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Prediction & Analysis</title>
+  <style>
+    :root {
+      --primary: #0D99A8;
+      --accent: #6A3FB5;
+      --bg: #F6FBFC;
+      --card: #ffffff;
+    }
+    body { font-family: Roboto, Arial, sans-serif; margin:0; background:var(--bg); color:#123; }
+    header { background:var(--primary); color:white; padding:18px; text-align:center; font-size:18px;}
+    main { padding:16px; }
+    .card { background:var(--card); border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); padding:12px; margin-bottom:12px;}
+    textarea { width:100%; height:80px; font-size:14px; padding:8px; border-radius:8px; border:1px solid #ddd; }
+    button { background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:600; }
+    .row { display:flex; gap:8px; margin-top:8px; }
+    #plot { width:100%; height:160px; background:#fff; border-radius:8px; padding:6px; }
+    pre { white-space:pre-wrap; word-break:break-word; }
+  </style>
+</head>
+<body>
+  <header>Prediction & Pattern Analysis</header>
+  <main>
+    <div class="card">
+      <label>Paste numeric series (comma separated):</label>
+      <textarea id="series" placeholder="e.g. 10,12,9,14,15,13"></textarea>
+      <div class="row">
+        <button onclick="runAnalysis()">Analyze</button>
+        <button onclick="clearAll()" style="background:#888">Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="plot"></div>
+    </div>
+
+    <div class="card">
+      <strong>Results</strong>
+      <pre id="result">No analysis yet.</pre>
+    </div>
+  </main>
+
+  <script>
+    // Simple in-browser SVG plot for small series
+    function drawSeries(id, series, series2) {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      const w = el.clientWidth || 360;
+      const h = el.clientHeight || 160;
+      const pad = 12;
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width', w);
+      svg.setAttribute('height', h);
+      const all = series.slice();
+      if (series2) all.push(...series2);
+      const min = Math.min(...all);
+      const max = Math.max(...all);
+      const range = (max - min) || 1;
+      // grid lines
+      for (let i=0;i<4;i++) {
+        const y = pad + (h - pad*2) * (i/3);
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', pad); line.setAttribute('x2', w-pad);
+        line.setAttribute('y1', y); line.setAttribute('y2', y);
+        line.setAttribute('stroke', '#eee'); line.setAttribute('stroke-width', '1');
+        svg.appendChild(line);
+      }
+      // helper to map x,y
+      const mapX = (i) => pad + (w - pad*2) * (i / Math.max(1, series.length-1));
+      const mapY = (v) => pad + (h - pad*2) * (1 - (v - min) / range);
+
+      // polyline for series
+      const points = series.map((v,i)=> `${mapX(i)},${mapY(v)}`).join(' ');
+      const p = document.createElementNS(svgNS,'polyline');
+      p.setAttribute('points', points);
+      p.setAttribute('fill','none');
+      p.setAttribute('stroke','#0D99A8');
+      p.setAttribute('stroke-width','2');
+      svg.appendChild(p);
+
+      if (series2) {
+        const points2 = series2.map((v,i)=> `${mapX(i)},${mapY(v)}`).join(' ');
+        const p2 = document.createElementNS(svgNS,'polyline');
+        p2.setAttribute('points', points2);
+        p2.setAttribute('fill','none');
+        p2.setAttribute('stroke','#6A3FB5');
+        p2.setAttribute('stroke-width','2');
+        p2.setAttribute('stroke-dasharray','6,4');
+        svg.appendChild(p2);
+      }
+
+      el.appendChild(svg);
+    }
+
+    function runAnalysis() {
+      const csv = document.getElementById('series').value.trim();
+      if (!csv) {
+        alert('Please enter numeric series.');
+        return;
+      }
+      // call Android bridge
+      try {
+        const out = AndroidAnalysis.analyzeCSV(csv);
+        const obj = JSON.parse(out);
+        if (obj.error) {
+          document.getElementById('result').textContent = 'Error: ' + obj.error;
+          return;
+        }
+        const ma = (obj.moving_average || '').split(',').map(parseFloat).filter(x=>!isNaN(x));
+        const exp = (obj.exp_smoothing || '').split(',').map(parseFloat).filter(x=>!isNaN(x));
+        const values = csv.split(',').map(s=>parseFloat(s.trim())).filter(x=>!isNaN(x));
+        drawSeries('plot', values, ma);
+
+        let pretty = '';
+        pretty += `Count: ${obj.count}\n`;
+        pretty += `Mean: ${obj.mean.toFixed(4)}\n`;
+        pretty += `StdDev: ${obj.stddev.toFixed(4)}\n`;
+        pretty += `AR(1) phi: ${obj.ar1_phi.toFixed(4)}\n`;
+        pretty += `AR(1) forecast(1): ${obj.ar1_forecast_1}\n`;
+        pretty += `AR(1) next 5: ${obj.ar1_forecast_5}\n`;
+        document.getElementById('result').textContent = pretty;
+      } catch (e) {
+        document.getElementById('result').textContent = 'JS error: ' + e;
+      }
+    }
+
+    function clearAll() {
+      document.getElementById('series').value = '';
+      document.getElementById('plot').innerHTML = '';
+      document.getElementById('result').textContent = 'No analysis yet.';
+    }
+  </script>
+</body>
+</html>

@@ -1,2 +1,2 @@
-rootProject.name = 'Bteavipredictor'
+rootProject.name = 'PredictionApp'
 include ':app'
