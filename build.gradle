@@ -1,22 +1,42 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python' // Chaquopy: Python on Android
+}
+
+android {
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.moiseraelaabel.bteavipredictor"
+        minSdk 21
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.2.2'
-        // Chaquopy gradle plugin - uncomment in use (classpath line kept here for reference)
-        classpath "com.chaquo.python:gradle:12.0.1"
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
+chaquopy {
+    // Use a local Python distribution or download
+    // The plugin will include the Python code under app/src/main/python
+    pip {
+        install "numpy"
     }
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }
