@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0D99A8</color> <!-- teal-ish -->
+    <color name="primaryVariant">#0A6E73</color>
+    <color name="secondary">#6A3FB5</color> <!-- modern purple accent -->
+    <color name="background">#F6FBFC</color>
+    <color name="surface">#FFFFFF</color>
+</resources>
